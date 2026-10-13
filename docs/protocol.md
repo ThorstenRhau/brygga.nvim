@@ -51,9 +51,11 @@ brygga sends these JSON-RPC notifications, shaped like the VS Code extension's
 - `at_mentioned` `{filePath, lineStart, lineEnd}`: from `:Brygga send`, with
   0-based lines.
 
-Only their shapes are verified, against the extension code and unit tests. No
-live session has yet shown the CLI using `selection_changed` or
-`at_mentioned`; check that when testing against the real CLI.
+Their shapes are verified against the extension code and unit tests. A live
+session on 2026-10-13 showed the CLI using `selection_changed`: the prompt
+shows `⧉ 1 line selected` and the model reported the selected text. No live
+session has yet shown the CLI using `at_mentioned`; check that when testing
+against the real CLI.
 
 ## openDiff replies
 
