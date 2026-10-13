@@ -1,7 +1,6 @@
 -- Minimal RFC 6455 WebSocket server on top of vim.uv TCP. Text messages only;
 -- it handles fragmentation, ping/pong and close, which is all Claude Code uses.
 local bit = require('bit')
-local sha1 = require('brygga.sha1')
 
 local M = {}
 
@@ -218,7 +217,8 @@ function M.listen(handlers)
         shutdown('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n')
         return false
       end
-      local accept = vim.base64.encode(sha1.binary(key .. GUID))
+      -- Loaded on the first handshake to keep it out of Neovim startup.
+      local accept = vim.base64.encode(require('brygga.sha1').binary(key .. GUID))
       local response = {
         'HTTP/1.1 101 Switching Protocols',
         'Upgrade: websocket',

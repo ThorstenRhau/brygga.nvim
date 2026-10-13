@@ -1,7 +1,6 @@
 -- brygga: lets Claude Code connect to Neovim as its IDE (the `/ide` command).
-local diff = require('brygga.diff')
+-- mcp, tools and diff load on Claude's first message to keep them out of Neovim startup.
 local lockfile = require('brygga.lockfile')
-local mcp = require('brygga.mcp')
 local selection = require('brygga.selection')
 local websocket = require('brygga.websocket')
 
@@ -34,6 +33,15 @@ end
 ---@return string
 local function notification(method, params)
   return vim.json.encode({ jsonrpc = '2.0', method = method, params = params })
+end
+
+--- Closes open diffs, without loading the diff module when it never ran.
+---@param client_id integer|nil
+local function close_diffs(client_id)
+  local diff = package.loaded['brygga.diff']
+  if diff then
+    diff.close_all(client_id)
+  end
 end
 
 --- Sends a notification to every connected Claude Code client.
@@ -93,13 +101,13 @@ function M.start()
       end, 500)
     end,
     on_message = function(client, text)
-      mcp.handle(text, client.id, function(reply)
+      require('brygga.mcp').handle(text, client.id, function(reply)
         client:send(reply)
       end)
     end,
     on_close = function(client)
       clients[client.id] = nil
-      diff.close_all(client.id)
+      close_diffs(client.id)
       notify('Claude Code disconnected')
     end,
   })
@@ -168,7 +176,7 @@ function M.stop()
   current.diagnostics_timer:close()
   vim.api.nvim_del_augroup_by_id(current.group)
   selection.stop()
-  diff.close_all()
+  close_diffs()
 end
 
 function M.status()
