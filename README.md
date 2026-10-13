@@ -21,17 +21,22 @@ brygga is pure Lua, has no dependencies and needs Neovim 0.12 or newer.
 
 ## Install
 
+Both examples follow the tagged releases instead of the latest commit on
+`main`.
+
 With `vim.pack`:
 
 ```lua
-vim.pack.add({ 'https://github.com/ThorstenRhau/brygga.nvim' })
+vim.pack.add({
+  { src = 'https://github.com/ThorstenRhau/brygga.nvim', version = vim.version.range('*') },
+})
 require('brygga').setup()
 ```
 
 With lazy.nvim, `opts` makes lazy call `setup()`:
 
 ```lua
-{ 'ThorstenRhau/brygga.nvim', opts = {} }
+{ 'ThorstenRhau/brygga.nvim', version = '*', opts = {} }
 ```
 
 ## Usage
