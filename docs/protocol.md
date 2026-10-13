@@ -44,7 +44,9 @@ brygga sends these JSON-RPC notifications, shaped like the VS Code extension's
 ([`lua/brygga/init.lua`](../lua/brygga/init.lua)):
 
 - `selection_changed`: the selection, debounced, and the latest one again
-  500 ms after a client connects.
+  500 ms after a client connects. A visual selection is sent as soon as visual
+  mode ends. When the operator edited the buffer (`d`, `c`, `p`), the cursor
+  position is sent instead.
 - `diagnostics_changed` `{uris}`: debounced 300 ms.
 - `at_mentioned` `{filePath, lineStart, lineEnd}`: from `:Brygga send`, with
   0-based lines.
@@ -68,6 +70,11 @@ itself or currently unused, and tools must be listed in `tools/list` to be
 called. Names and result shapes follow the VS Code extension
 ([`lua/brygga/tools.lua`](../lua/brygga/tools.lua)).
 
+Before a tool runs, `mcp.lua` checks its arguments against its `inputSchema`:
+required names and the types of known ones. A mismatch returns an `isError`
+result such as `Missing argument: tab_name`, so a malformed `openDiff` never
+opens a tab. Unknown arguments are ignored.
+
 ## Positions and paths
 
 - Lines are 0-based in selections, diagnostics and `at_mentioned`. Columns
@@ -75,7 +82,8 @@ called. Names and result shapes follow the VS Code extension
 - Neovim resolves symlinks in buffer names (on macOS, `/var` becomes
   `/private/var`). Incoming paths are resolved with `fs_realpath` before
   matching buffers (`util.canonical` in
-  [`lua/brygga/util.lua`](../lua/brygga/util.lua)).
+  [`lua/brygga/util.lua`](../lua/brygga/util.lua)). Tools return these
+  canonical paths.
 
 ## Testing against the real CLI
 

@@ -235,6 +235,40 @@ test('lockfile.write reports a directory it cannot create', function()
   equal(type(err), 'string')
 end)
 
+test('lockfile.write skips unchanged content but recreates a deleted file', function()
+  local path = lockfile.path(2)
+  assert(lockfile.write(2, 'token'))
+  local inode = assert(vim.uv.fs_stat(path)).ino
+  assert(lockfile.write(2, 'token'))
+  equal(assert(vim.uv.fs_stat(path)).ino, inode, 'same content is not rewritten')
+  assert(lockfile.write(2, 'other'))
+  equal(assert(vim.uv.fs_stat(path)).ino ~= inode, true, 'new content is written')
+  vim.uv.fs_unlink(path)
+  assert(lockfile.write(2, 'other'))
+  equal(vim.uv.fs_stat(path) ~= nil, true, 'a deleted file is written again')
+  lockfile.remove(2)
+end)
+
+test('tools return canonical paths', function()
+  local path = tmpfile('a')
+  vim.cmd.edit(path)
+  local reply = vim.json.decode(result_text(call('checkDocumentDirty', { filePath = path })[1]))
+  equal(reply.filePath, assert(vim.uv.fs_realpath(path)))
+end)
+
+test(':Brygga send refuses buffers that are not files', function()
+  vim.api.nvim_buf_set_name(0, 'term://~//1234:claude')
+  vim.bo.buftype = 'nofile'
+  local messages = {}
+  local notify = vim.notify
+  vim.notify = function(msg)
+    messages[#messages + 1] = msg
+  end
+  vim.cmd('Brygga send')
+  vim.notify = notify
+  equal(messages, { 'brygga: current buffer is not a file' })
+end)
+
 test('openDiff handles new files and keeps a missing trailing newline', function()
   local path = vim.fn.tempname() .. '/new.lua'
   local replies = call('openDiff', {
@@ -292,6 +326,23 @@ test('selection reports UTF-16 columns with an exclusive end', function()
   equal(selection.current().selection.isEmpty, true)
 end)
 
+test('a visual edit does not report the text left at the old marks', function()
+  local path = tmpfile('one\ntwo\nthree\nfour')
+  vim.cmd.edit(path)
+  selection.start(function() end)
+  vim.cmd('normal! Vj\27')
+  equal(selection.latest().text, 'one\ntwo', 'a plain exit keeps the selection')
+  -- The cursor is on "two": delete "two" and "three", leaving the cursor on "four".
+  vim.cmd('normal! Vjd')
+  vim.wait(500, function()
+    return selection.latest().text == ''
+  end)
+  local latest = selection.latest()
+  selection.stop()
+  equal(latest.text, '')
+  equal(latest.selection.start, { line = 1, character = 0 })
+end)
+
 test('openFile selects text between startText and endText', function()
   local path = tmpfile('alpha\nbeta gamma\ndelta')
   local reply = call('openFile', { filePath = path, startText = 'gamma', endText = 'del' })[1]
@@ -306,6 +357,17 @@ test('openFile selects text between startText and endText', function()
   call('openFile', { filePath = path, startText = 'start', endText = 'end' })
   equal(selection.current().text, 'start middle end')
   vim.cmd('normal! \27')
+end)
+
+test('tools reject missing and mistyped arguments before running', function()
+  local path = tmpfile('a')
+  local reply = call('openDiff', { old_file_path = path, new_file_path = path, new_file_contents = 'b' })[1]
+  equal(reply.result.isError, true)
+  equal(result_text(reply), 'Missing argument: tab_name')
+  equal(#vim.api.nvim_list_tabpages(), 1, 'no diff tab is left behind')
+  reply = call('checkDocumentDirty', { filePath = 5 })[1]
+  equal(reply.result.isError, true)
+  equal(result_text(reply), 'Argument filePath must be a string')
 end)
 
 test('mcp rejects non-object params', function()

@@ -14,10 +14,10 @@ local subcommands = {
     require('brygga').status()
   end,
   send = function(opts)
-    local path = vim.api.nvim_buf_get_name(0)
-    if path == '' then
-      return vim.notify('brygga: current buffer has no file', vim.log.levels.WARN)
+    if not require('brygga.util').is_file_buffer(0) then
+      return vim.notify('brygga: current buffer is not a file', vim.log.levels.WARN)
     end
+    local path = vim.api.nvim_buf_get_name(0)
     if opts.range > 0 then
       require('brygga').send(path, opts.line1, opts.line2)
     else

@@ -53,15 +53,6 @@ function M.utf16_col(line, byte)
   return ok and col or byte
 end
 
---- Converts a UTF-16 column back to a 0-based byte column.
----@param line string
----@param col integer
----@return integer
-function M.byte_col(line, col)
-  local ok, byte = pcall(vim.str_byteindex, line, 'utf-16', col, false)
-  return ok and byte or math.min(col, #line)
-end
-
 --- A window to show files in: the current one unless it is a terminal or other special buffer.
 ---@return integer
 function M.editor_window()

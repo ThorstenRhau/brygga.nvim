@@ -23,6 +23,23 @@ local function tool_list()
   return { tools = list }
 end
 
+--- Checks required arguments and the types of known ones against the tool's input schema.
+---@return string|nil err
+local function check_args(schema, args)
+  for _, name in ipairs(schema.required or {}) do
+    if args[name] == nil then
+      return 'Missing argument: ' .. name
+    end
+  end
+  for name, value in pairs(args) do
+    local property = schema.properties[name]
+    -- The schemas only use JSON types whose names match Lua's (string, boolean).
+    if property and type(value) ~= property.type then
+      return ('Argument %s must be a %s'):format(name, property.type)
+    end
+  end
+end
+
 --- Handles one incoming message. `send` may be called later for tools that wait on the user.
 ---@param text string
 ---@param client_id integer
@@ -72,6 +89,10 @@ function M.handle(text, client_id, send)
   local args = params.arguments or {}
   if type(args) ~= 'table' then
     return send(err(id, -32602, 'Invalid arguments'))
+  end
+  local invalid = check_args(tool.inputSchema, args)
+  if invalid then
+    return reply({ { type = 'text', text = invalid } }, true)
   end
   local call_ok, content = pcall(tool.handler, args, { client_id = client_id, reply = reply })
   if not call_ok then

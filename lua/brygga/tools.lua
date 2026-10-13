@@ -37,23 +37,16 @@ end
 local STRING = { type = 'string' }
 local BOOLEAN = { type = 'boolean' }
 
---- Resolves a path from Claude: absolute, or relative to the working directory.
-local function resolve(path)
-  if not vim.startswith(path, '/') and not path:match('^~') then
-    path = vim.fs.joinpath(vim.fn.getcwd(), path)
-  end
-  return vim.fs.normalize(path)
-end
-
 local SEVERITY = { 'Error', 'Warning', 'Information', 'Hint' }
 
 local function diagnostics_for(buf)
+  local lines = {}
+  local function position(line, col)
+    lines[line] = lines[line] or vim.api.nvim_buf_get_lines(buf, line, line + 1, false)[1] or ''
+    return { line = line, character = util.utf16_col(lines[line], col) }
+  end
   local items = {}
   for _, d in ipairs(vim.diagnostic.get(buf)) do
-    local function position(line, col)
-      local content = vim.api.nvim_buf_get_lines(buf, line, line + 1, false)[1] or ''
-      return { line = line, character = util.utf16_col(content, col) }
-    end
     items[#items + 1] = {
       message = d.message,
       severity = SEVERITY[d.severity] or 'Error',
@@ -82,7 +75,7 @@ local function find_text(buf, needle, from_line, from_col)
 end
 
 local function open_file(args)
-  local path = resolve(args.filePath)
+  local path = util.canonical(args.filePath)
   if not vim.uv.fs_stat(path) then
     error('File not found: ' .. path, 0)
   end
@@ -246,7 +239,7 @@ M.list = {
     handler = function(args)
       local result = {}
       if args.uri and args.uri ~= '' then
-        local path = args.uri:match('^file://') and vim.uri_to_fname(args.uri) or resolve(args.uri)
+        local path = util.canonical(args.uri:match('^file://') and vim.uri_to_fname(args.uri) or args.uri)
         local buf = util.find_buffer(path)
         result[1] = buf and diagnostics_for(buf) or { uri = vim.uri_from_fname(path), diagnostics = {} }
       else
@@ -264,7 +257,7 @@ M.list = {
     description = 'Check whether a document has unsaved changes',
     inputSchema = schema({ filePath = STRING }, { 'filePath' }),
     handler = function(args)
-      local path = resolve(args.filePath)
+      local path = util.canonical(args.filePath)
       local buf = util.find_buffer(path)
       if not buf then
         return document_not_open(path)
@@ -277,7 +270,7 @@ M.list = {
     description = 'Save a document with unsaved changes',
     inputSchema = schema({ filePath = STRING }, { 'filePath' }),
     handler = function(args)
-      local path = resolve(args.filePath)
+      local path = util.canonical(args.filePath)
       local buf = util.find_buffer(path)
       if not buf then
         return document_not_open(path)

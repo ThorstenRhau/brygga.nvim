@@ -122,7 +122,9 @@ end
 ---@field port integer
 ---@field close fun() stops listening and drops every connection, including unfinished handshakes
 
---- Starts listening on 127.0.0.1. Handlers run on the main loop (scheduled).
+--- Starts listening on 127.0.0.1. `on_open`, `on_message` and `on_close` run on the main loop
+--- (scheduled). `authorize` runs in the uv read callback, a fast context: it must not call the
+--- Neovim API.
 ---@param handlers brygga.ws.Handlers
 ---@return brygga.ws.Server|nil server
 ---@return string|nil err
@@ -172,6 +174,8 @@ function M.listen(handlers)
       closed = true
       sockets[sock] = nil
       if not sock:is_closing() then
+        -- Without this, data arriving before the close could re-run the handshake.
+        sock:read_stop()
         -- uv shutdown waits for pending writes; closing right away would cancel `final`.
         local function close_sock()
           if not sock:is_closing() then

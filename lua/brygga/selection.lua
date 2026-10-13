@@ -133,12 +133,19 @@ function M.start(notify)
     group = group,
     callback = schedule,
   })
+  -- changedtick when visual mode started; it differs on exit when the operator edited the buffer.
+  local visual_tick
   vim.api.nvim_create_autocmd('ModeChanged', {
     group = group,
-    callback = function()
+    callback = function(ev)
+      local was_visual, is_now_visual = is_visual(vim.v.event.old_mode), is_visual(vim.v.event.new_mode)
+      if is_now_visual and not was_visual then
+        visual_tick = vim.api.nvim_buf_get_changedtick(ev.buf)
+      end
       -- Send a just-finished visual selection right away and keep it until the cursor
-      -- moves, so pressing <Esc> and switching to Claude does not erase it.
-      if is_visual(vim.v.event.old_mode) and not is_visual(vim.v.event.new_mode) then
+      -- moves, so pressing <Esc> and switching to Claude does not erase it. After d, c or p
+      -- the marks point at other text, so report the cursor instead.
+      if was_visual and not is_now_visual and visual_tick == vim.api.nvim_buf_get_changedtick(ev.buf) then
         timer:stop()
         return update(notify, M.last_visual())
       end

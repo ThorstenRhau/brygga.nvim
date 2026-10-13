@@ -28,6 +28,14 @@ local function notify(msg, level)
   vim.notify('brygga: ' .. msg, level or vim.log.levels.INFO)
 end
 
+--- Encodes a JSON-RPC notification.
+---@param method string
+---@param params table
+---@return string
+local function notification(method, params)
+  return vim.json.encode({ jsonrpc = '2.0', method = method, params = params })
+end
+
 --- Sends a notification to every connected Claude Code client.
 ---@param method string
 ---@param params table
@@ -35,7 +43,7 @@ function M.broadcast(method, params)
   if not state then
     return
   end
-  local message = vim.json.encode({ jsonrpc = '2.0', method = method, params = params })
+  local message = notification(method, params)
   for _, client in pairs(state.clients) do
     client:send(message)
   end
@@ -80,7 +88,7 @@ function M.start()
       vim.defer_fn(function()
         local latest = selection.latest()
         if latest and clients[client.id] then
-          client:send(vim.json.encode({ jsonrpc = '2.0', method = 'selection_changed', params = latest }))
+          client:send(notification('selection_changed', latest))
         end
       end, 500)
     end,
@@ -119,6 +127,13 @@ function M.start()
     callback = vim.schedule_wrap(refresh_lockfile),
   })
   local changed = {}
+  local send_changed = vim.schedule_wrap(function()
+    local uris = vim.tbl_keys(changed)
+    changed = {}
+    if #uris > 0 then
+      M.broadcast('diagnostics_changed', { uris = uris })
+    end
+  end)
   vim.api.nvim_create_autocmd('DiagnosticChanged', {
     group = group,
     callback = function(ev)
@@ -126,17 +141,7 @@ function M.start()
         changed[vim.uri_from_bufnr(ev.buf)] = true
       end
       timer:stop()
-      timer:start(
-        300,
-        0,
-        vim.schedule_wrap(function()
-          local uris = vim.tbl_keys(changed)
-          changed = {}
-          if #uris > 0 then
-            M.broadcast('diagnostics_changed', { uris = uris })
-          end
-        end)
-      )
+      timer:start(300, 0, send_changed)
     end,
   })
   selection.start(function(sel)

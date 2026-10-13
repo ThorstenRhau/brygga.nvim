@@ -1,6 +1,10 @@
 -- Discovery file Claude Code reads from ~/.claude/ide/<port>.lock to find this server.
 local M = {}
 
+-- Content last written per lock path, so unchanged refreshes skip the disk.
+---@type table<string, string>
+local written = {}
+
 --- Returns the lock directory, honoring CLAUDE_CONFIG_DIR like Claude Code does.
 ---@return string
 function M.dir()
@@ -38,17 +42,13 @@ function M.workspace_folders()
   return folders
 end
 
---- Writes the lock file atomically with owner-only permissions.
+--- Writes the lock file atomically with owner-only permissions. Skips the write when the
+--- file already holds the same content.
 ---@param port integer
 ---@param token string
 ---@return boolean ok
 ---@return string|nil err
 function M.write(port, token)
-  local dir = M.dir()
-  local made, mkdir_err = pcall(vim.fn.mkdir, dir, 'p', tonumber('700', 8))
-  if not made then
-    return false, mkdir_err
-  end
   local content = vim.json.encode({
     pid = vim.fn.getpid(),
     workspaceFolders = M.workspace_folders(),
@@ -57,6 +57,13 @@ function M.write(port, token)
     authToken = token,
   })
   local final = M.path(port)
+  if written[final] == content and vim.uv.fs_stat(final) then
+    return true
+  end
+  local made, mkdir_err = pcall(vim.fn.mkdir, M.dir(), 'p', tonumber('700', 8))
+  if not made then
+    return false, mkdir_err
+  end
   local tmp = final .. '.tmp'
   local fd, err = vim.uv.fs_open(tmp, 'w', tonumber('600', 8))
   if not fd then
@@ -73,12 +80,15 @@ function M.write(port, token)
     vim.uv.fs_unlink(tmp)
     return false, rename_err
   end
+  written[final] = content
   return true
 end
 
 ---@param port integer
 function M.remove(port)
-  vim.uv.fs_unlink(M.path(port))
+  local path = M.path(port)
+  written[path] = nil
+  vim.uv.fs_unlink(path)
 end
 
 return M
