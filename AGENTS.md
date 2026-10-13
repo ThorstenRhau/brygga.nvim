@@ -22,6 +22,10 @@ before changing protocol behavior.
   rejects anything else. Record verified protocol changes in
   `docs/protocol.md`.
 - uv callbacks run in a fast context: schedule before calling the Neovim API.
+- To close a socket after a final write (close frame, HTTP error), use
+  `shutdown` and close in its callback. Closing right away cancels the write.
+- Keep handshake nonces in tests in `RFC_NONCE`. Gitleaks reports a literal
+  `Sec-WebSocket-Key: <value>` as a generic API key and blocks the commit.
 - Tests must never write to `~/.claude`: `make test` sets a temporary
   `CLAUDE_CONFIG_DIR`, and `tests/headless.lua` refuses to run without one.
 

@@ -13,8 +13,8 @@ This index maps brygga's durable, checked-in project knowledge.
 ## Current-state documentation
 
 - [Claude Code IDE protocol](protocol.md): discovery, transport, the call
-  sequence the CLI uses, openDiff replies, and how to test against the real
-  CLI.
+  sequence the CLI uses, openDiff replies, the notifications brygga sends and
+  how far they are verified, and how to test against the real CLI.
 
 ## Decision history
 

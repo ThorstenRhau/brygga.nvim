@@ -38,6 +38,21 @@ re-verify when Claude Code changes behavior.
 
 `tab_name` looks like `✻ [Claude Code] app.lua (5da2a1) ⧉`.
 
+## Notifications from Neovim
+
+brygga sends these JSON-RPC notifications, shaped like the VS Code extension's
+([`lua/brygga/init.lua`](../lua/brygga/init.lua)):
+
+- `selection_changed`: the selection, debounced, and the latest one again
+  500 ms after a client connects.
+- `diagnostics_changed` `{uris}`: debounced 300 ms.
+- `at_mentioned` `{filePath, lineStart, lineEnd}`: from `:Brygga send`, with
+  0-based lines.
+
+Only their shapes are verified, against the extension code and unit tests. No
+live session has yet shown the CLI using `selection_changed` or
+`at_mentioned`; check that when testing against the real CLI.
+
 ## openDiff replies
 
 - Accepted: `[{text: "FILE_SAVED"}, {text: <final contents>}]`. The CLI writes
