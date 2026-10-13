@@ -72,6 +72,11 @@ function M.is_running()
   return state ~= nil
 end
 
+---@return integer|nil
+function M.port()
+  return state and state.port
+end
+
 ---@return integer
 function M.client_count()
   return state and vim.tbl_count(state.clients) or 0

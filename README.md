@@ -114,6 +114,9 @@ Jupyter `executeCode`.
 
 `/ide` does not list Neovim:
 
+- Run `:checkhealth brygga`. It checks the Neovim version, the `claude`
+  command, the lock file and the proxy settings, and says how to fix each
+  problem.
 - Run `:Brygga status` to see if the server is running.
 - Start `claude` from a directory inside Neovim's working directory or an LSP
   workspace root.

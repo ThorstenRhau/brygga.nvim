@@ -487,5 +487,15 @@ test('server writes a private lock file and accepts only the right token', funct
   equal(vim.env.CLAUDE_CODE_SSE_PORT, nil)
 end)
 
+test('health check runs and reports the running server', function()
+  brygga.start()
+  local ok, err = pcall(vim.cmd, 'silent checkhealth brygga')
+  local text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n')
+  brygga.stop()
+  assert(ok, err)
+  assert(text:find('Listening on 127.0.0.1', 1, true), text)
+  assert(text:find('Lock file present', 1, true), text)
+end)
+
 print(('%d passed, %d failed'):format(passed, failures))
 os.exit(failures == 0 and 0 or 1)
