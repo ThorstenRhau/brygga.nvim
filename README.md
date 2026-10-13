@@ -7,6 +7,12 @@ files. Edits it proposes open as a diff in Neovim.
 
 brygga is pure Lua, has no dependencies and needs Neovim 0.12 or newer.
 
+brygga is built to stay out of your way. Its MCP, diff and SHA-1 code loads
+only when Claude first needs it, so it adds little to Neovim's startup. The
+server runs on `vim.uv`, so it does not block the editor. Selection and
+diagnostic updates are debounced, which sends one message after a burst of
+cursor moves or LSP changes.
+
 ## Features
 
 - Claude sees your selection and follows it as the cursor moves.
