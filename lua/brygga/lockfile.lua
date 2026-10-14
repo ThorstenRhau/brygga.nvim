@@ -1,7 +1,8 @@
 -- Discovery file Claude Code reads from ~/.claude/ide/<port>.lock to find this server.
 local M = {}
 
--- Content last written per lock path, so unchanged refreshes skip the disk.
+-- Content last written per lock path, so unchanged refreshes skip the disk. Most refreshes
+-- change nothing: LspAttach fires per buffer, and DirChanged per window switch under 'autochdir'.
 ---@type table<string, string>
 local written = {}
 
