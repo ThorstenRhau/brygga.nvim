@@ -106,6 +106,27 @@ the server and the token. brygga removes the file when Neovim exits.
 The lock file lists Neovim's working directory and the LSP workspace roots.
 `/ide` offers Neovim only when Claude's directory is inside one of them.
 
+```mermaid
+sequenceDiagram
+  participant N as Neovim (brygga)
+  participant L as Lock file
+  participant C as Claude Code
+
+  N->>L: Write port, token and workspace folders
+  N->>N: Set CLAUDE_CODE_SSE_PORT for :terminal
+  C->>L: Pick the lock file (/ide, --ide or CLAUDE_CODE_SSE_PORT)
+  C->>N: Connect over WebSocket with the token
+  par Neovim to Claude, at any time
+    N-->>C: Selection and diagnostics changes
+    N-->>C: :Brygga send as an @-mention
+  and Claude to Neovim, when it needs to
+    C->>N: Tool calls (open files, list buffers, save, ...)
+    C->>N: openDiff with the proposed edit
+    N-->>C: :w accepts the change, :q rejects it
+  end
+  N->>L: Remove the lock file on exit
+```
+
 Claude Code decides which tools to call. Today the model reads diagnostics
 directly, and the CLI uses the other tools internally. brygga does not support
 Jupyter `executeCode`.
