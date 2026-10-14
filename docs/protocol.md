@@ -36,6 +36,12 @@ re-verify when Claude Code changes behavior.
    user decides. `close_tab` follows twice with the same `tab_name`, then
    `getDiagnostics` for the file and for all files.
 
+The CLI sends `openDiff` only when it asks the user to approve an Edit or
+Write call. In the modes that approve edits automatically (accept edits, auto,
+bypass permissions) it writes the file itself and sends no `openDiff`. Other
+calls, such as `getDiagnostics`, still arrive. Shell commands never produce an
+`openDiff`. Verified 2026-10-14.
+
 `tab_name` looks like `✻ [Claude Code] app.lua (5da2a1) ⧉`.
 
 ## Notifications from Neovim

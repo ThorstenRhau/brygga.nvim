@@ -3,7 +3,8 @@
 Brygga means "bridge" in Swedish. It lets Claude Code use Neovim as its IDE,
 the same way it uses the VS Code and JetBrains extensions. Start `claude`, type
 `/ide`, and Claude can see your selection, your diagnostics and your open
-files. Edits it proposes open as a diff in Neovim.
+files. When it asks permission to edit a file, the edit opens as a diff in
+Neovim.
 
 brygga is pure Lua, has no dependencies and needs Neovim 0.12 or newer.
 
@@ -18,7 +19,8 @@ cursor moves or LSP changes.
 - Claude sees your selection and follows it as the cursor moves.
 - A visual selection stays after `<Esc>` until the cursor moves, so you can
   switch to Claude without losing it.
-- Proposed edits open as a side-by-side diff in a new tab.
+- Edits that Claude asks permission for open as a side-by-side diff in a new
+  tab.
 - Claude reads LSP diagnostics and is told when they change.
 - `:Brygga send` adds the current file or a range of lines to Claude's prompt
   as an @-mention.
@@ -96,6 +98,17 @@ and the proposal on the right.
 If the file has unsaved changes in Neovim, brygga does not open the diff. Save
 the file and ask Claude again.
 
+### When diffs appear
+
+- Claude Code asks Neovim for a diff only when it needs your approval. That
+  is the default permission mode. In accept edits, auto and bypass
+  permissions modes it writes the file directly, so no diff opens. Everything
+  else, such as diagnostics, still works.
+- Only the Edit and Write tools open diffs. A file changed by a shell command,
+  such as `sed` or a heredoc, never does.
+- An edit without a diff still changes the file on disk. Set `autoread` or run
+  `:checktime` to load it into the open buffer.
+
 ## How it works
 
 brygga runs a WebSocket server on `127.0.0.1` with a random port and a random
@@ -144,9 +157,7 @@ Jupyter `executeCode`.
 - Look for the lock file in `~/.claude/ide/`.
 - If you set an HTTP proxy variable, add `localhost,127.0.0.1` to `no_proxy`.
 
-Edits do not open as diffs: Claude shows a diff only when it asks permission to
-edit. In a permission mode that accepts edits automatically, Claude writes the
-files directly and there is nothing to review.
+If an edit opens no diff, see [When diffs appear](#when-diffs-appear).
 
 ## Development
 
