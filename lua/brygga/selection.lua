@@ -20,6 +20,10 @@ local function is_visual(mode)
   return mode == 'v' or mode == 'V' or mode == '\22'
 end
 
+local function is_select(mode)
+  return mode == 's' or mode == 'S' or mode == '\19'
+end
+
 local function pos(buf, line0, byte)
   local text = vim.api.nvim_buf_get_lines(buf, line0, line0 + 1, false)[1] or ''
   return { line = line0, character = util.utf16_col(text, byte) }
@@ -144,8 +148,10 @@ function M.start(notify)
       end
       -- Send a just-finished visual selection right away and keep it until the cursor
       -- moves, so pressing <Esc> and switching to Claude does not erase it. After d, c or p
-      -- the marks point at other text, so report the cursor instead.
-      if was_visual and not is_now_visual and visual_tick == vim.api.nvim_buf_get_changedtick(ev.buf) then
+      -- the marks point at other text, so report the cursor instead. Switching to select
+      -- mode (snippet placeholders) has not set the marks yet, so it does not count as an exit.
+      local exited = was_visual and not is_now_visual and not is_select(vim.v.event.new_mode)
+      if exited and visual_tick == vim.api.nvim_buf_get_changedtick(ev.buf) then
         timer:stop()
         return update(notify, M.last_visual())
       end

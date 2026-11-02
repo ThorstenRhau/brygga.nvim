@@ -343,6 +343,23 @@ test('a visual edit does not report the text left at the old marks', function()
   equal(latest.selection.start, { line = 1, character = 0 })
 end)
 
+test('switching from visual to select mode does not read stale marks', function()
+  local path = tmpfile('one\ntwo\nthree\nfour')
+  vim.cmd.edit(path)
+  -- Leave '< and '> on line 4, then shorten the buffer without adjusting them.
+  vim.cmd('normal! GV\27')
+  vim.api.nvim_buf_set_lines(0, 2, -1, false, {})
+  selection.start(function() end)
+  -- vim.snippet selects a placeholder like this. Autocmd errors only reach v:errmsg.
+  vim.v.errmsg = ''
+  vim.api.nvim_feedkeys(vim.keycode('ggvl<C-g>'), 'xt', false)
+  local mode, errmsg = vim.fn.mode(), vim.v.errmsg
+  vim.cmd('normal! \27')
+  selection.stop()
+  equal(errmsg, '')
+  equal(mode, 's')
+end)
+
 test('openFile selects text between startText and endText', function()
   local path = tmpfile('alpha\nbeta gamma\ndelta')
   local reply = call('openFile', { filePath = path, startText = 'gamma', endText = 'del' })[1]
